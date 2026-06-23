@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# OS
+.DS_Store
+
+# Full private image set (~100 MB) — use scripts/setup_private_images.py
+data/private_test/images/
+
+# Ground truth (BTC only — never commit)
+data/private_test/solution_private.csv
+solution_private.csv
+
+# Outputs
+submission_private.csv
+checkpoint_private.csv
+dataset_images/
