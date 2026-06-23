@@ -59,4 +59,4 @@ python scripts/run_submission.py --limit 6
 streamlit run streamlit_app.py
 ```
 
-See [docs/TEAM_SETUP.md](../docs/TEAM_SETUP.md) for the full fork checklist.
+See [README.md](../README.md#team-setup) for the full fork checklist.

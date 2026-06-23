@@ -310,7 +310,7 @@ def _render_about_tab() -> None:
     st.subheader("8. Liên kết")
     links = [
         f"- **Repository:** [{cfg.GITHUB_REPO}]({cfg.GITHUB_REPO})",
-        "- **Deploy guide:** [docs/DEPLOY_STREAMLIT.md](docs/DEPLOY_STREAMLIT.md)",
+        "- **Setup & deploy:** [README.md](README.md)",
         f"- **Other resource:** [{cfg.OTHER_RESOURCE}]({cfg.OTHER_RESOURCE})",
     ]
     if cfg.STREAMLIT_APP_URL:
