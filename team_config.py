@@ -9,10 +9,10 @@ REPO_ROOT = Path(__file__).resolve().parent
 
 # Team identity (required after fork)
 
-TEAM_NAME = "Team ABC"
-TEAM_MEMBERS = "[Member 1], [Member 2], [Member 3]"
-GITHUB_REPO = "https://github.com/your-team/ura-hackathon-team-abc"
-OTHER_RESOURCE = "https://example.com/other-resource"
+TEAM_NAME = "Team 13 - TANAHI"
+TEAM_MEMBERS = "[Phan Tấn Tài], [Trần Đức Hiếu], [Trịnh Hữu Trí],[Nguyễn Hoàng Ngân]"
+GITHUB_REPO = "https://github.com/johntai271-png/Team13_streamlit.git"
+OTHER_RESOURCE = "https://canva.link/z9023igdtcn2nfy"
 STREAMLIT_APP_URL = ""  # e.g. "https://ura-team-abc.streamlit.app" after deploy
 
 
@@ -51,12 +51,19 @@ DEFAULT_MIN_CONF = 0.35
 # Model footprint (edit when you change OCR / models — benchmark layer reads this)
 
 MODEL_PROFILE: dict[str, str | float | None] = {
-    "pipeline": "EasyOCR (vi+en) + regex brands + sklearn product head",
+    "pipeline": (
+        "PaddleOCR PP-OCRv4 (det only) + VietOCR (vgg_seq2seq) "
+        "+ 46 regex brand rules + sklearn (TF-IDF + LogReg) + char-ngram KNN"
+    ),
     "runtime_device": "CPU",
     "product_head_mb": None,  # auto-estimate when None
-    "ocr_backend_note": "EasyOCR weights ~200 MB (downloaded once, not in repo)",
+    "ocr_backend_note": (
+        "Paddle det + VietOCR vgg_seq2seq weights downloaded once; "
+        "OCR text = VietOCR đọc từng crop (không dùng latin rec của Paddle)"
+    ),
     "lightweight_notes": (
-        "Baseline is CPU-friendly; product head is a few MB. "
-        "Swap OCR for a lighter stack to improve latency on Cloud."
+        "Trích xuất brand/product chạy rules + sklearn (vài MB) trên CPU. "
+        "Pipeline layout (khung đỏ + prominence) chỉ bù khi ML trống hoặc "
+        "brand/product hiếm — không ghi đè dự đoán ML đã có support."
     ),
 }

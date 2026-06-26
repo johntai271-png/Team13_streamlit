@@ -236,10 +236,10 @@ def _render_about_tab() -> None:
     st.header("About")
     st.markdown(
         """
-        Tab này dành cho **mỗi team** trình bày giải pháp OCR + trích xuất
-        **brand_name** và **product_name** cho cuộc thi. Hãy thay các placeholder
-        bên dưới bằng nội dung thật của team bạn (hoặc chỉnh trực tiếp trong
-        [`streamlit_app.py`](streamlit_app.py) hàm `_render_about_tab`).
+        **TANAHI** — hệ thống OCR + trích xuất **brand_name** / **product_name**
+        từ ảnh sản phẩm trên mạng xã hội, cho **The 2nd URA Hackathon 2026**.
+        Giải pháp kết hợp OCR lai (Paddle det + VietOCR) với hai hướng trích xuất:
+        rules + ML trên văn bản và phân tích bố cục ảnh.
         """
     )
 
@@ -272,36 +272,53 @@ def _render_about_tab() -> None:
     st.subheader("3. Ý tưởng & pipeline giải pháp")
     st.markdown(
         """
-        > **Placeholder — mô tả pipeline của team**
+        **TANAHI** kết hợp **OCR lai (Paddle det + VietOCR)** với **2 hướng trích xuất**:
+        văn bản (rules + ML trên OCR) và bố cục ảnh (khung đỏ + prominence).
 
-        1. **Tiền xử lý ảnh** — `[ví dụ: resize, tăng contrast, sharpen, …]`
-        2. **OCR** — `[ví dụ: EasyOCR vi+en, PaddleOCR, custom model, …]`
-        3. **Hậu xử lý OCR** — `[ví dụ: dedupe token, chuẩn hóa Unicode, …]`
-        4. **Trích xuất brand** — `[ví dụ: regex dictionary, NER, fuzzy match, …]`
-        5. **Trích xuất product** — `[ví dụ: rule-based, sklearn, LLM, …]`
-        6. **Hậu kiểm / ensemble** — `[nếu có]`
+        1. **Tiền xử lý ảnh** — resize về tối đa 1280px, tăng contrast (1.35×), sharpen.
+        2. **OCR lai** — PaddleOCR **PP-OCRv4 chỉ detection** lấy bounding box chữ,
+           rồi **VietOCR (vgg_seq2seq)** đọc tiếng Việt/Anh trên từng crop
+           (không dùng latin rec của Paddle để đọc dấu chính xác hơn).
+        3. **Hậu xử lý OCR** — chuẩn hoá Unicode (NFC), sửa lỗi song ngữ Việt–Anh,
+           lọc nhiễu mạng xã hội (@mention, #hashtag, URL, caption TikTok), dedupe token.
+        4. **Trích xuất chính `predict_labels`** — chuỗi ưu tiên:
+           46 quy tắc regex brand → alias registry → BrandClassifier (TF-IDF + LogReg)
+           → ProductClassifier (có gate) → BrandKNN (char-ngram similarity).
+        5. **Pipeline bố cục `extract_v5`** — dò khung sản phẩm ("khung đỏ") bằng Canny,
+           chấm điểm *prominence* (độ to / vị trí / chữ hoa) để tìm brand/product nổi bật.
+        6. **Hợp nhất** — pipeline bố cục **chỉ bù** khi ML trống hoặc brand/product
+           hiếm/chưa có trong train (prominence ≥ ngưỡng), **không ghi đè** ML đã chắc.
         """
     )
 
     st.subheader("4. Điểm khác biệt & đóng góp chính")
     st.markdown(
         """
-        - `[Điểm mạnh 1]`
-        - `[Điểm mạnh 2]`
-        - `[Điểm mạnh 3]`
+        - **OCR lai Paddle-det + VietOCR** — tách phần *dò chữ* (Paddle, nhanh) khỏi
+          phần *đọc chữ* (VietOCR, mạnh tiếng Việt có dấu), thay vì một engine làm cả hai.
+        - **Chống ảo giác (anti-hallucination)** — chỉ giữ token brand vừa khớp từ điển
+          vừa thực sự đọc được trong OCR, tránh bịa tên thương hiệu.
+        - **Lọc nhiễu social/quảng cáo nhiều tầng** — loại caption TikTok, headline tin tức,
+          mô tả dài, ngày tháng/giá %, để không nhầm thành brand/product.
+        - **Học động có kiểm soát** — phát hiện brand/product mới từ ảnh train qua ngưỡng
+          *prominence* + lọc rác + yêu cầu support tối thiểu (không học bừa).
+        - **Ưu tiên hãng (manufacturer)** — chấm điểm để chọn tên hãng làm `brand_name`,
+          tách dòng sản phẩm sang `product_name` (vd Abbott / Similac).
         """
     )
 
     st.subheader("5. Công nghệ sử dụng")
     st.markdown(
         """
-        | Thành phần | Công nghệ (placeholder) |
-        |------------|-------------------------|
-        | OCR | `[EasyOCR / …]` |
-        | Brand extraction | `[Regex rules / …]` |
-        | Product extraction | `[Sklearn / …]` |
-        | Runtime | `[CPU / GPU, Python 3.11+]` |
-        | Demo UI | `Streamlit` |
+        | Thành phần | Công nghệ |
+        |------------|-----------|
+        | Text detection | PaddleOCR PP-OCRv4 (det only) |
+        | Text recognition | VietOCR (vgg_seq2seq) |
+        | Brand extraction | 46 regex rules + alias registry + TF-IDF/LogReg + char-ngram KNN |
+        | Product extraction | rules sub-line + ProductClassifier (gate + LogReg) + layout prominence |
+        | Layout pipeline | OpenCV (Canny khung đỏ) + prominence scoring |
+        | Runtime | CPU, Python 3.11+ |
+        | Demo UI | Streamlit |
         """
     )
 
@@ -335,10 +352,16 @@ def _render_about_tab() -> None:
     st.markdown(
         """
         **Hạn chế hiện tại**
-        - `[ví dụ: brand mới chưa có trong từ điển]`
+        - OCR lai (Paddle det + VietOCR đọc từng crop) chậm hơn one-shot trên ảnh nhiều chữ.
+        - Brand/product nằm ngoài từ điển + chưa đủ support trong train dễ bị bỏ sót.
+        - Khung đỏ (Canny) kém ổn định với ảnh nền phức tạp hoặc nhiều sản phẩm.
+        - VietOCR + PaddleOCR + PyTorch tốn RAM khi cold start trên Streamlit Cloud.
 
         **Hướng phát triển**
-        - `[ví dụ: fine-tune OCR trên domain retail VN]`
+        - Mở rộng từ điển brand + tăng dữ liệu train cho các nhãn hiếm.
+        - Thay khung đỏ Canny bằng object detection nhẹ (vd YOLO-nano) để khoanh vùng tốt hơn.
+        - Fine-tune VietOCR trên domain bao bì sản phẩm bán lẻ Việt Nam.
+        - Quantize / cache model để giảm cold start và latency trên Cloud.
         """
     )
 
