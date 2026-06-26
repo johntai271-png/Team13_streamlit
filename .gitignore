@@ -23,4 +23,7 @@ outputs/*
 !outputs/.gitkeep
 submission_private.csv
 checkpoint_private.csv
+checkpoint.csv
+submission.csv
+scratch/
 dataset_images/
