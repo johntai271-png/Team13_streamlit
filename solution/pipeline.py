@@ -1044,13 +1044,34 @@ def _prefetch_det_model():
 def _make_paddle_det():
     """Det PP-OCRv4 — chỉ text_detector, không rec latin."""
     _patch_numpy_for_imgaug()
+    # Tắt IR-optim của Paddle inference (PaddleOCR hard-code bật ở utility.py).
+    # Trên CPU không có AVX (vd Streamlit Cloud), pass SelfAttentionFusePass khi
+    # tối ưu đồ thị gây 'Illegal instruction' (SIGILL) làm chết tiến trình NGAY khi
+    # khởi tạo predictor. Tắt ir_optim bỏ qua các fuse-pass đó; OCR vẫn chạy bình
+    # thường. Kaggle/máy có AVX không bị ảnh hưởng.
+    try:
+        from paddle import inference as _pi
+        if not getattr(_pi.create_predictor, '_tanahi_noiropt', False):
+            _orig_cp = _pi.create_predictor
+
+            def _cp_noiropt(config, *a, **kw):
+                try:
+                    config.switch_ir_optim(False)
+                except Exception:
+                    pass
+                return _orig_cp(config, *a, **kw)
+
+            _cp_noiropt._tanahi_noiropt = True
+            _pi.create_predictor = _cp_noiropt
+    except Exception:
+        pass
     import paddleocr  # phải import trước prefetch / ppocr
     det_dir = None
     try:
         det_dir = _prefetch_det_model()
     except Exception as e:
         print(f'  Prefetch det bỏ qua ({e}) — PaddleOCR sẽ tự tải model khi khởi tạo.')
-    
+
     from paddleocr import PaddleOCR
     # Cấu hình rõ ràng chỉ sử dụng Detector, bỏ qua Rec và Cls để tránh tải thêm file thừa
     return PaddleOCR(
