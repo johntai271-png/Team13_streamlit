@@ -30,11 +30,7 @@ warnings.filterwarnings('ignore')
 
 # ---- Cấu hình chính ----
 RUNNING_ON_KAGGLE      = os.path.exists('/kaggle/input')
-OCR_BOX_MIN_AREA_RATIO     = 0.002   # lọc box det < 0.2% — bắt chữ nhỏ hơn
-OCR_PREPROCESS_MAX_DIM     = 1400    # resize trước OCR (cao hơn = chữ rõ hơn)
-OCR_PREPROCESS_CONTRAST    = 1.45    # tăng contrast tiền xử lý
-OCR_READING_ORDER_ROW_TOL  = 0.55    # ngưỡng gom dòng khi sắp box đọc
-MEDIA_FRAME_SAMPLES        = 11      # mẫu frame GIF/video (cell 7b)
+OCR_BOX_MIN_AREA_RATIO     = 0.003   # lọc box det < 0.3% diện tích ảnh
 PIPELINE_LAYOUT_MIN_PROMINENCE = 30.0  # layout chỉ bù ML khi prominence >= ngưỡng này
 PIPELINE_LAYOUT_FALLBACK_BRAND = 22.0  # ngưỡng fallback brand trong extract_v5
 DYNAMIC_PROMINENCE_THRESHOLD = 28.0  # học động: đăng ký brand/product mới khi prominence > ngưỡng
@@ -177,8 +173,6 @@ from solution.brand_rules import (
     post_process_prediction,
     guess_product_from_ocr,
     SOCIAL_NOISE_WORDS,
-    apply_ocr_typo_map,
-    correct_ocr_from_train_catalog,
 )
 
 from solution.product_model import (
@@ -281,13 +275,11 @@ def bilingual_post_processor(text_list):
         if not text:
             processed_list.append("")
             continue
-        text = unicodedata.normalize('NFC', str(text).strip())
-        text = apply_ocr_typo_map(text)
+        text = unicodedata.normalize('NFC', text)
         words_in_line = text.split()
         cleaned_words = [clean_bilingual_word(w) for w in words_in_line]
         processed_line = " ".join(cleaned_words)
         processed_line = re.sub(r'\s+([.,!?;:])', r'\1', processed_line)
-        processed_line = re.sub(r'\s+', ' ', processed_line).strip()
         processed_list.append(processed_line)
     return processed_list
 
@@ -956,9 +948,6 @@ _P = [
     ('HiPP Combiotic organic milk',                'HiPP',           None),
     ('Nestl\u00e9 NAN OPTIpro 0-6',                'Nestl\u00e9',    'NAN'),
     ('Dove Smoothie t\u1ea9y da ch\u1ebft',        'Dove',           None),
-    ('Nescafe Gold Blend huong chat',               'Nescafe',        None),
-    ('Panasonic GH5 mirrorless camera',            'Panasonic',      None),
-    ('La Roche Posay Effaclar gel',                'La Roche-Posay', None),
     ('Vinamilk Dielac so 1',                        'Vinamilk',       'Dielac'),
     ('Trả lời hình luận của Thúy nêng chốt liền rẻ quá Abbott Ped Complete Ion Pediasure Úc 850g',
                                                    'Abbott',         'PediaSure'),
@@ -1099,63 +1088,17 @@ def _make_paddle_det():
     )
 
 
-def preprocess(img, max_dim=None, contrast=None):
-    """Tiền xử lý ảnh trước det/VietOCR — resize + contrast + sharpness."""
-    max_dim = max_dim if max_dim is not None else OCR_PREPROCESS_MAX_DIM
-    contrast = contrast if contrast is not None else OCR_PREPROCESS_CONTRAST
-    img = img.convert('RGB')
+def preprocess(img, max_dim=1280):
     w, h = img.size
     if max(w, h) > max_dim:
         r = max_dim / max(w, h)
         img = img.resize((int(w * r), int(h * r)), Image.LANCZOS)
-    img = ImageEnhance.Contrast(img).enhance(float(contrast))
-    img = ImageEnhance.Sharpness(img).enhance(1.2)
+    img = ImageEnhance.Contrast(img).enhance(1.35)
     return img.filter(ImageFilter.SHARPEN)
 
 
-def _sort_boxes_reading_order(boxes):
-    """Sắp box theo dòng (top->bottom) rồi trái->phải — ocr_text đọc tự nhiên hơn."""
-    if not boxes:
-        return []
-    row_tol = float(OCR_READING_ORDER_ROW_TOL)
-    items = []
-    for box in boxes:
-        ys = [p[1] for p in box]
-        xs = [p[0] for p in box]
-        cy = sum(ys) / len(ys)
-        cx = sum(xs) / len(xs)
-        h = max(ys) - min(ys) or 1.0
-        items.append((box, cy, cx, h))
-    items.sort(key=lambda t: t[1])
-    rows = []
-    for box, cy, cx, h in items:
-        tol = max(10.0, h * row_tol)
-        placed = False
-        for row in rows:
-            if abs(cy - row['cy']) <= tol:
-                row['items'].append((cx, box))
-                row['cy'] = (row['cy'] + cy) / 2.0
-                placed = True
-                break
-        if not placed:
-            rows.append({'cy': cy, 'items': [(cx, box)]})
-    rows.sort(key=lambda r: r['cy'])
-    ordered = []
-    for row in rows:
-        row['items'].sort(key=lambda t: t[0])
-        ordered.extend(b for _, b in row['items'])
-    return ordered
-
-
 def postprocess_ocr(text):
-    """Hậu xử lý ocr_text: chuẩn Unicode, typo map, train catalog, dedup token."""
-    text = str(text or '').strip()
-    if not text:
-        return ''
-    text = unicodedata.normalize('NFC', text)
-    text = re.sub(r'\s+', ' ', text)
-    text = apply_ocr_typo_map(text)
-    text = correct_ocr_from_train_catalog(text)
+    text = re.sub(r'\s+', ' ', text).strip()
     tokens = text.split()
     if not tokens:
         return ''
@@ -1181,7 +1124,7 @@ def _pipeline_sorted_boxes(cv_img, det_engine):
         if ((max(p[0] for p in box) - min(p[0] for p in box))
             * (max(p[1] for p in box) - min(p[1] for p in box)) / img_area) >= min_ratio
     ]
-    return _sort_boxes_reading_order(valid_boxes)
+    return sorted(valid_boxes, key=lambda box: (box[0][1], box[0][0]))
 
 
 def _vietocr_pipeline_ocr(pil_img, boxes):
@@ -1292,7 +1235,7 @@ if _RUN_BATCH:
 
 import numpy as np
 
-MEDIA_FRAME_SAMPLES = int(globals().get('MEDIA_FRAME_SAMPLES', 11))   # mẫu frame GIF/video
+MEDIA_FRAME_SAMPLES = 7   # số frame lấy mẫu để chọn 1 frame tốt nhất
 _frame_cache = {}         # path -> PIL.Image RGB (tránh decode lại video)
 
 

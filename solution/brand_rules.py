@@ -61,84 +61,9 @@ OCR_TYPO_MAP = (
     (r'canfuc([o0])', r'canfoc\1'),
     (r'vinamill\b', 'vinamilk'),
     (r'vinamik\b',  'vinamilk'),
-    (r'vinamil\b',  'vinamilk'),
     (r'halong\b',   'ha long'),
     (r'pat\u00ea',  'pate'),
-    (r'pediasure',   'PediaSure'),
-    (r'similac',     'Similac'),
-    (r'ensure\b',   'Ensure'),
-    (r'glucerna',    'Glucerna'),
-    (r'dielac',      'Dielac'),
-    (r'dutchlady',   'Dutch Lady'),
-    (r'dutch\s*lady','Dutch Lady'),
-    (r'nescafe',     'Nescafe'),
-    (r'nestle',      'Nestl\u00e9'),
-    (r'nestl[e\u00e9]',   'Nestl\u00e9'),
-    (r'optipro',     'OPTIpro'),
-    (r'highlands?\s*coffee', 'Highlands Coffee'),
-    (r'larocheposay|la\s*roche[\s-]*posay', 'La Roche-Posay'),
-    (r"paulaschoice|paula['\u2019]?s\s*choice", "Paula's Choice"),
-    (r'pediasure',   'PediaSure'),
-    (r'profutura',   'Profutura'),
-    (r'growplus|grow\s*plus', 'GrowPlus'),
-    (r'cotc[e]n',    'c\u1ed9t \u0111\u00e8n'),
-    (r'cot\s*den',  'c\u1ed9t \u0111\u00e8n'),
 )
-
-_TRAIN_OCR_CANON = None
-
-
-def _build_train_ocr_canon():
-    """Map fold(ocr_train) -> ocr chu\u1ea9n t\u1eeb train_labels (s\u1eeda OCR g\u1ea7n GT)."""
-    global _TRAIN_OCR_CANON
-    if _TRAIN_OCR_CANON is not None:
-        return _TRAIN_OCR_CANON
-    canon = {}
-    df = train_labels_df
-    col = OCR_COL
-    if df is not None and col and col in df.columns:
-        for val in df[col].dropna().astype(str):
-            v = unicodedata.normalize('NFC', val.strip())
-            if len(v) < 6:
-                continue
-            k = _fold_ascii(v)
-            if k and k not in canon:
-                canon[k] = v
-    _TRAIN_OCR_CANON = canon
-    return canon
-
-
-def apply_ocr_typo_map(text):
-    """\u00c1p OCR_TYPO_MAP l\u00ean chu\u1ed7i OCR."""
-    if not text:
-        return ''
-    t = unicodedata.normalize('NFC', str(text))
-    for pat, repl in OCR_TYPO_MAP:
-        if callable(repl):
-            continue
-        t = re.sub(pat, repl, t, flags=re.IGNORECASE)
-    return re.sub(r'\s+', ' ', t).strip()
-
-
-def correct_ocr_from_train_catalog(text, cutoff=0.92):
-    """N\u1ebfu OCR g\u1ea7n kh\u1edbp m\u1eabu train -> tr\u1ea3 b\u1ea3n chu\u1ea9n (ch\u1ec9 chu\u1ed7i ng\u1eafn)."""
-    if not text or len(text) > 120:
-        return text
-    canon = _build_train_ocr_canon()
-    if not canon:
-        return text
-    key = _fold_ascii(text)
-    if key in canon:
-        return canon[key]
-    try:
-        from difflib import get_close_matches
-        hit = get_close_matches(key, list(canon.keys()), n=1, cutoff=cutoff)
-        if hit:
-            return canon[hit[0]]
-    except Exception:
-        pass
-    return text
-
 
 SOCIAL_CAPTION_RES = (
     r'(?i)\btr[aả]\s*l[oời]\s*h[iì]nh\s*lu[aậ]n\b',
@@ -264,122 +189,9 @@ _PRODUCT_LINE_PATTERNS = [
     (r'(?i)\bnan\b', 'NAN'),
     (r'(?i)\bcombiotic\b', 'Combiotic'),
     (r'(?i)\bgrowplus\b', 'GrowPlus'),
+    (r'(?i)\bcolos\s*baby\b', 'Colos Baby'),
     (r'(?i)\btra\s+sen\s+vang\b', 'Trà Sen Vàng'),
     (r'(?i)\bpate\s+c[ộo]t\s*d[eè]n\b', 'Pate Cột Đèn'),
-    (r'(?i)\bnescafe\b', 'Nescafe'),
-    (r'(?i)\bgrow\s*plus\b', 'GrowPlus'),
-
-    # --- Nhóm mỹ phẩm ---
-    (r'(?i)\bkem\s+ch[ôo]ng\s+n[ăa]ng\b', 'Kem chống nắng'),
-    (r'(?i)\bs[ữu]a\s+r[ửu]a\s+m[ặa]t\b', 'Sữa rửa mặt'),
-    (r'(?i)\bserum\b', 'Serum'),
-    (r'(?i)\bretinol\b', 'Retinol'),
-    (r'(?i)\btoner\b', 'Toner'),
-    (r'(?i)\bm[ặa]t\s+n[ạa]\s+gi[ấa]y\b', 'Mặt nạ giấy'),
-    (r'(?i)\bkem\s+dư[õo]ng\s+[âa]m\b', 'Kem dưỡng ẩm'),
-    (r'(?i)\bson\s+m[ôo]i\b', 'Son môi'),
-    (r'(?i)\bt[ẩa]y\s+t[ếe]\s+b[àa]o\s+ch[ếe]t\b', 'Tẩy tế bào chết'),
-    (r'(?i)\bx[ịi]t\s+kho[áa]ng\b', 'Xịt khoáng'),
-    (r'(?i)\bkem\s+n[ềe]n\s+cushion\b', 'Kem nền cushion'),
-    (r'(?i)\bph[ấa]n\s+ph[ủu]\b', 'Phấn phủ'),
-    (r'(?i)\bm[áa]\s+h[ôo]ng\b', 'Má hồng'),
-    (r'(?i)\bmascara\b', 'Mascara'),
-    (r'(?i)\bkem\s+che\s+khuy[ếe]t\s+đi[ểe]m\b', 'Kem che khuyết điểm'),
-    (r'(?i)\bcollagen\b', 'Collagen'),
-    (r'(?i)\bglutathione\b', 'Glutathione'),
-    (r'(?i)\bvitamin\s+[cC]\b', 'Vitamin C'),
-
-    # --- Nhóm sữa & dinh dưỡng ---
-    (r'(?i)\bs[ữu]a\s+b[ộo]t\b', 'Sữa bột'),
-    (r'(?i)\bcolos(?:\s*baby|baby|bab|i[ạa]?b?)\b', 'Colos Baby'),
-    (r'(?i)\bs[ữu]a\s+t[ăa]ng\s+c[âa]n\b', 'Sữa tăng cân'),
-    (r'(?i)\bs[ữu]a\s+pha\s+s[ẵa]n\b', 'Sữa pha sẵn'),
-    (r'(?i)\bb[ỉi]m\b', 'Bỉm'),
-    (r'(?i)\bt[ãa]\b', 'Tã'),
-    (r'(?i)\bd3k2\b', 'D3K2'),
-    (r'(?i)\bvitamin\s+d3\b', 'Vitamin D3'),
-    (r'(?i)\bsiro\s+[ăa]n\s+ngon\b', 'Siro ăn ngon'),
-    (r'(?i)\bs[ữu]a\s+chua\s+u[ôo]ng\b', 'Sữa chua uống'),
-    (r'(?i)\blactoferrin\b', 'Lactoferrin'),
-    (r'(?i)\bcanxi\b', 'Canxi'),
-    (r'(?i)\bdha\b', 'DHA'),
-    (r'(?i)\bmen\s+vi\s+sinh\b', 'Men vi sinh'),
-
-    # --- Nhóm đồ ăn vặt ---
-    (r'(?i)\bb[áa]nh\s+tr[áa]ng\s+tr[ộo]n\b', 'Bánh tráng trộn'),
-    (r'(?i)\btr[àa]\s+s[ữu]a\b', 'Trà sữa'),
-    (r'(?i)\bkem\s+tươi\b', 'Kem tươi'),
-    (r'(?i)\bkem\s+[ôo]c\s+qu[ếe]\b', 'Kem ốc quế'),
-    (r'(?i)\bb[áa]nh\s+bao\b', 'Bánh bao'),
-    (r'(?i)\bch[âa]n\s+g[àa]\s+s[ảa]\s+t[ắa]c\b', 'Chân gà sả tắc'),
-    (r'(?i)\bm[ìi]\s+cay\b', 'Mì cay'),
-    (r'(?i)\bx[úu]c\s+x[íi]ch\b', 'Xúc xích'),
-    (r'(?i)\bb[áa]nh\s+tr[áa]ng\s+nư[ớo]ng\b', 'Bánh tráng nướng'),
-    (r'(?i)\bsnack\b', 'Snack'),
-    (r'(?i)\bb[áa]nh\s+kem\b', 'Bánh kem'),
-    (r'(?i)\bb[áa]nh\s+cu[ôo]n\b', 'Bánh cuốn'),
-    (r'(?i)\bch[èe]\b', 'Chè'),
-    (r'(?i)\bpudding\b', 'Pudding'),
-
-    # --- Nhóm thời trang ---
-    (r'(?i)\b[áa]o\s+thun\s+basic\b', 'Áo thun basic'),
-    (r'(?i)\bqu[ầa]n\s+jeans\b', 'Quần jeans'),
-    (r'(?i)\b[ôo]ng\s+r[ộo]ng\b', 'Ống rộng'),
-    (r'(?i)\bđ[ầa]m\b', 'Đầm'),
-    (r'(?i)\bv[áa]y\b', 'Váy'),
-    (r'(?i)\b[áa]o\s+kho[áa]c\b', 'Áo khoác'),
-    (r'(?i)\bđ[ồo]\s+b[ộo]\s+[ởo]\s+nh[àa]\b', 'Đồ bộ ở nhà'),
-    (r'(?i)\b[áa]o\s+d[àa]i\s+c[áa]ch\s+t[âa]n\b', 'Áo dài cách tân'),
-    (r'(?i)\bqu[ầa]n\s+jogger\b', 'Quần jogger'),
-    (r'(?i)\b[áa]o\s+polo\b', 'Áo polo'),
-    (r'(?i)\bch[âa]n\s+v[áa]y\s+x[ếe]p\s+ly\b', 'Chân váy xếp ly'),
-    (r'(?i)\bt[úu]i\s+x[áa]ch\b', 'Túi xách'),
-    (r'(?i)\bv[íi]\s+da\b', 'Ví da'),
-    (r'(?i)\bk[íi]nh\s+m[áa]t\b', 'Kính mát'),
-    (r'(?i)\bmũ\s+lư[ỡo]i\s+trai\b', 'Mũ lưỡi trai'),
-
-    # --- Nhóm thiết bị & đồ gia dụng ---
-    (r'(?i)\bs[ạa]c\s+d[ựu]\s+ph[òo]ng\b', 'Sạc dự phòng'),
-    (r'(?i)\btai\s+nghe\s+bluetooth\b', 'Tai nghe bluetooth'),
-    (r'(?i)\bloa\s+mini\b', 'Loa mini'),
-    (r'(?i)\bđ[èe]n\s+led\b', 'Đèn LED'),
-    (r'(?i)\bcamera\s+an\s+ninh\b', 'Camera an ninh'),
-    (r'(?i)\bqu[ạa]t\s+mini\b', 'Quạt mini'),
-    (r'(?i)\bm[áa]y\s+h[úu]t\s+b[ụu]i\s+mini\b', 'Máy hút bụi mini'),
-    (r'(?i)\bn[ôo]i\s+chi[êe]n\s+kh[ôo]ng\s+d[ầa]u\b', 'Nồi chiên không dầu'),
-    (r'(?i)\bm[áa]y\s+xay\s+sinh\s+t[ôo]\b', 'Máy xay sinh tố'),
-    (r'(?i)\bch[ảa]o\s+ch[ôo]ng\s+d[íi]nh\b', 'Chảo chống dính'),
-    (r'(?i)\b[âa]m\s+si[êe]u\s+t[ôo]c\b', 'Ấm siêu tốc'),
-    (r'(?i)\bh[ôo]p\s+đ[ựu]ng\s+th[ựu]c\s+ph[âa]m\b', 'Hộp đựng thực phẩm'),
-    (r'(?i)\bb[ìi]nh\s+gi[ữu]\s+nhi[ệe]t\b', 'Bình giữ nhiệt'),
-
-    # --- Nhóm thực phẩm & đặc sản ---
-    (r'(?i)\bs[ầa]u\s+ri[êe]ng\b', 'Sầu riêng'),
-    (r'(?i)\bxo[àa]i\b', 'Xoài'),
-    (r'(?i)\bthanh\s+long\b', 'Thanh long'),
-    (r'(?i)\bbư[ởơ]i\b', 'Bưởi'),
-    (r'(?i)\bg[ạa]o\s+st25\b', 'Gạo ST25'),
-    (r'(?i)\bm[ăa]ng\s+c[ụu]t\b', 'Măng cụt'),
-    (r'(?i)\bpate\b', 'Pate'),
-    (r'(?i)\bnư[ớơ]c\s+m[ắa]m\b', 'Nước mắm'),
-    (r'(?i)\btư[ơ]ng\s+[ớo]t\b', 'Tương ớt'),
-    (r'(?i)\bhat\s+n[êe]m\b', 'Hạt nêm'),
-    (r'(?i)\bd[ầa]u\s+[ăa]n\b', 'Dầu ăn'),
-    (r'(?i)\bs[ôo]t\s+mayonnaise\b', 'Sốt mayonnaise'),
-
-    # --- Nhóm vệ sinh & chăm sóc cơ thể ---
-    (r'(?i)\bs[ữu]a\s+t[ắa]m\b', 'Sữa tắm'),
-    (r'(?i)\bd[ầa]u\s+g[ộo]i\b', 'Dầu gội'),
-    (r'(?i)\bd[ầa]u\s+x[ảa]\b', 'Dầu xả'),
-    (r'(?i)\bs[ữu]a\s+dư[ỡo]ng\s+th[ểe]\b', 'Sữa dưỡng thể'),
-    (r'(?i)\bkem\s+body\b', 'Kem body'),
-    (r'(?i)\bx[ịi]t\s+kh[ửu]\s+m[ùu]i\b', 'Xịt khử mùi'),
-    (r'(?i)\bnư[ớơ]c\s+hoa\b', 'Nước hoa'),
-    (r'(?i)\bnư[ớơ]c\s+lau\s+s[àa]n\b', 'Nước lau sàn'),
-    (r'(?i)\bnư[ớơ]c\s+r[ửu]a\s+ch[ée]n\b', 'Nước rửa chén'),
-    (r'(?i)\bb[ộo]t\s+gi[ạa]t\b', 'Bột giặt'),
-    (r'(?i)\bnư[ớơ]c\s+x[ảa]\s+v[ảa]i\b', 'Nước xả vải'),
-    (r'(?i)\bgi[âa]y\s+v[ệe]\s+sinh\b', 'Giấy vệ sinh'),
 ]
 
 
@@ -518,57 +330,6 @@ BRAND_RULES = [
     (r'the\s*coffee\s*house', 'The Coffee House', ['tra phuc kien']),
     (r'nhan\s*hoa\s*foods?', 'Nh\u00e2n H\u00f2a Foods', ['pate']),
     (r'\bacnes\b', 'Acnes', ['vitamin cleanser']),
-
-    # --- Nh\u00f3m S\u1eefa & Dinh d\u01b0\u1ee1ng (m\u1edf r\u1ed9ng, kh\u00f4ng VitaDairy/Morinaga/Colos Baby) ---
-    (r'\babbott\b', 'Abbott', ['pediasure','similac','ensure','glucerna']),
-    (r'grow\s*plus|growplus', 'GrowPlus', []),
-
-    # --- Skincare & M\u1ef9 ph\u1ea9m ---
-    (r'\bdove\b', 'Dove', ['smoothie','men+care','go fresh']),
-    (r'\bolay\b', 'Olay', ['total effects','regenerist']),
-    (r"l['\u2019]?oreal|loreal", "L'Oreal", []),
-    (r'maybelline', 'Maybelline', []),
-    (r'\bnivea\b', 'Nivea', []),
-    (r'cetaphil', 'Cetaphil', []),
-    (r'bioderma', 'Bioderma', ['sensibio']),
-    (r'la\s*roche[\s-]*posay|larocheposay', 'La Roche-Posay', []),
-    (r'skin\s*1004|skin1004', 'Skin1004', []),
-    (r'\bklairs\b', 'Klairs', []),
-    (r"paula['\u2019]?s\s*choice", "Paula's Choice", []),
-    (r'\bgarnier\b', 'Garnier', []),
-    (r'the\s*whoo', 'The Whoo', []),
-    (r'\blaneige\b', 'Laneige', []),
-    (r'hada\s*labo', 'Hada Labo', []),
-    (r'\beveline\b', 'Eveline', []),
-    (r'the\s*body\s*shop', 'The Body Shop', []),
-    (r'hazeline', 'Hazeline', []),
-    (r'\bbotanika\b', 'Botanika', []),
-    (r'\bziaja\b', 'ZIAJA', []),
-
-    # --- Th\u1ef1c ph\u1ea9m & \u0110\u1ed3 u\u1ed1ng ---
-    (r'nescafe|nescaf[e\u00e9]', 'Nescafe', ['gold','classic','latte']),
-
-    # --- M\u00e1y m\u00f3c & \u0110i\u1ec7n t\u1eed ---
-    (r'panasonic', 'Panasonic', []),
-    (r'\bdell\b', 'Dell', []),
-    (r'\blenovo\b', 'Lenovo', []),
-    (r'\bgodox\b', 'Godox', []),
-    (r'\bcanon\b', 'Canon', []),
-    (r'\bedifier\b', 'Edifier', []),
-    (r'\banker\b', 'Anker', []),
-    (r'\btefal\b', 'Tefal', []),
-    (r'\bnidec\b', 'Nidec', []),
-    (r'vinfast', 'VinFast', []),
-    (r'mitsubishi', 'Mitsubishi', []),
-
-    # --- Ch\u01b0a x\u00e1c minh \u0111\u1ea7y \u0111\u1ee7 ---
-    (r'\btololo\b', 'Tololo', []),
-    (r'\byamia\b', 'Yamia', []),
-    (r'lanbena', 'Lanbena', []),
-    (r'\boggi\b', 'Oggi', []),
-    (r'\bbere\b', 'BERE', []),
-    (r'suanon', 'SUANON', []),
-    (r'\bnitol\b', 'Nitol', []),
     (r'\bpate\b|pat\u00ea', 'Pate', []),
 ]
 
@@ -809,13 +570,6 @@ KNOWN_BRANDS = [
     'Meiji', 'Ba V\u00ec', 'Lothamilk', 'Yomost', '\u0110\u00e0 L\u1ea1t Milk', 'Kun',
     'Fami', 'Anlene', 'Anchor', 'Vissan', 'Hafi', 'Ba Hu\u00e2n', 'San H\u00e0',
     'CP', 'Long Bi\u00ean', 'Acnes',
-    'GrowPlus',
-    'Dove', 'Olay', "L'Oreal", 'Maybelline', 'Nivea', 'Cetaphil', 'Bioderma',
-    'La Roche-Posay', 'Skin1004', 'Klairs', "Paula's Choice", 'Garnier', 'The Whoo',
-    'Laneige', 'Hada Labo', 'Eveline', 'The Body Shop', 'Hazeline', 'Botanika', 'ZIAJA',
-    'Nescafe', 'Panasonic', 'Dell', 'Lenovo', 'Godox', 'Canon', 'Edifier', 'Anker',
-    'Tefal', 'Nidec', 'VinFast', 'Mitsubishi',
-    'Tololo', 'Yamia', 'Lanbena', 'Oggi', 'BERE', 'SUANON', 'Nitol',
 ]
 
 # Hãng (manufacturer) vs dòng sản phẩm — ưu tiên hãng làm brand_name
