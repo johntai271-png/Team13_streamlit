@@ -10,7 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parent
 # Team identity (required after fork)
 
 TEAM_NAME = "Team 13 - TANAHI"
-TEAM_MEMBERS = "[Phan Tấn Tài], [Trần Đức Hiếu], [Trịnh Hữu Trí],[Nguyễn Hoàng Ngân]"
+TEAM_MEMBERS = "Trần Đức Hiếu, Phan Tấn Tài, Trịnh Hữu Trí, Nguyễn Hoàng Ngân"
 GITHUB_REPO = "https://github.com/johntai271-png/Team13_streamlit.git"
 OTHER_RESOURCE = "https://canva.link/z9023igdtcn2nfy"
 STREAMLIT_APP_URL = ""  # e.g. "https://ura-team-abc.streamlit.app" after deploy

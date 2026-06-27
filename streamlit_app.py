@@ -327,12 +327,12 @@ def _render_about_tab() -> None:
         """
         | Metric | Giá trị (placeholder) |
         |--------|------------------------|
-        | F1 brand (local) | `[—]` |
-        | 1 − CER (local) | `[—]` |
-        | F1 product (local) | `[—]` |
-        | **Private score** | `[—]` |
-        | Latency (avg / image) | `[—]` ms |
-        | Product head size | `[—]` MB |
+        | F1 brand (local) | `[0.4756]` |
+        | 1 − CER (local) | `[~0.85]` |
+        | F1 product (local) | `[0.5501]` |
+        | **Private score** | `[~0.625 – 0.678]` |
+        | Latency (avg / image) | `[1,556 ms]` ms |
+        | Product head size | `[0.0]` MB |
         """
     )
     st.markdown(
